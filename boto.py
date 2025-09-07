@@ -1,11 +1,27 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, C
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 
 # --- BOT TOKEN ---
 import os
 TOKEN = os.environ.get("BOT_TOKEN")  # Render дээр нэмсэн BOT_TOKEN
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+# --- Capture phone ---
+async def capture_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if "order" in context.user_data and "name" in context.user_data["order"]:
+        context.user_data["order"]["phone"] = update.message.text
+        product = context.user_data["order"]["product"]
 
+        # Админд мэдэгдэл
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=f"Шинэ захиалга ирлээ!\n"
+                 f"Бараа: {product['name']}\n"
+                 f"Нэр: {context.user_data['order']['name']}\n"
+                 f"Утас: {context.user_data['order']['phone']}"
+        )
+
+        await update.message.reply_text("Таны захиалга бүртгэгдлээ. 🙏 Баярлалаа!")
+        context.user_data.clear()
 
 # --- Products (Demo) ---
 products = [
