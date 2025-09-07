@@ -21,12 +21,12 @@ products = [
 # --- /start command ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("📦 Бүтээгдэхүүн", callback_data="products")],
+        [InlineKeyboardButton("📦 Оргинал хувцаснууд", callback_data="products")],
         [InlineKeyboardButton("📞 Холбоо барих", callback_data="contact")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Манай дэлгүүрт тавтай морил! 🤖 Та доорх цэсээс сонгоно уу:",
+        "Манай онлайн шопд тавтай морил! 🤖 Хөөе чи доорх гал хувцаснуудаас захиал!:",
         reply_markup=reply_markup
     )
 
@@ -42,14 +42,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 with open(img_path, "rb") as img:
                     await query.message.reply_photo(
                         img,
-                        caption=f"{p['name']}\nҮнэ: {p['price']}₮\nБарааг захиалахын тулд /order_{p['id']} гэж бичнэ үү"
+                        caption=f"{p['name']}\nҮнэ: {p['price']}₮\nБарааг өөрийн болгохын тулд👉🏿 /order_{p['id']} гэж явуул хөөрхөнөө❤️ "
                     )
             except FileNotFoundError:
                 await query.message.reply_text(f"Image {p['img']} олдсонгүй.")
 
     elif query.data == "contact":
         await query.message.reply_text(
-            "📞 Утас: 99119911\n🏬 Хаяг: Улаанбаатар, СБД\n🌐 Вэб: www.shop.mn"
+            "📞 Утас: 91803699\n🏬 Хаяг: Диваажин, СБД\n🌐 Вэб: https://facebook.com/dtuguldur1"
         )
 
 # --- /order command ---
@@ -88,7 +88,7 @@ async def capture_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
              f"Утас: {context.user_data['order']['phone']}"
     )
 
-    await update.message.reply_text("Таны захиалга бүртгэгдлээ. 🙏 Баярлалаа!")
+    await update.message.reply_text("Таны захиалгыг авлаа Данс Xacbank: iban-85003200 5006050144 Нэр:Төгөлдөр Баяртогох Thank you fineshy😹t!")
     context.user_data.clear()
     return ConversationHandler.END
 
