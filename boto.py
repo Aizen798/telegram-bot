@@ -2,7 +2,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 
 # --- BOT TOKEN ---
-TOKEN = "8496354252:AAEtknBNNJEl0y_Jg0J_IOXnOnBeBDOm-30"
+import os
+TOKEN = os.environ.get("BOT_TOKEN")  # Render дээр нэмсэн BOT_TOKEN
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+
 
 # --- Products (Demo) ---
 products = [
@@ -29,7 +32,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "products":
         for p in products:
-            with open(p["bers.png"], "rb") as img:
+            with open(p["img"], "rb") as img:
                 await query.message.reply_photo(
                     img,
                     caption=f"{p['name']}\nҮнэ: {p['price']}₮\nБарааг захиалахын тулд /order_{p['id']} гэж бичнэ үү"
