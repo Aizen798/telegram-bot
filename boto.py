@@ -1,27 +1,16 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, C
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
-
-# --- BOT TOKEN ---
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler,
+    MessageHandler, filters, ConversationHandler
+)
 import os
+
+# --- BOT TOKEN & ADMIN ID ---
 TOKEN = os.environ.get("BOT_TOKEN")  # Render дээр нэмсэн BOT_TOKEN
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
-# --- Capture phone ---
-async def capture_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "order" in context.user_data and "name" in context.user_data["order"]:
-        context.user_data["order"]["phone"] = update.message.text
-        product = context.user_data["order"]["product"]
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "5907197742"))  # өөрийн Telegram ID
 
-        # Админд мэдэгдэл
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"Шинэ захиалга ирлээ!\n"
-                 f"Бараа: {product['name']}\n"
-                 f"Нэр: {context.user_data['order']['name']}\n"
-                 f"Утас: {context.user_data['order']['phone']}"
-        )
-
-        await update.message.reply_text("Таны захиалга бүртгэгдлээ. 🙏 Баярлалаа!")
-        context.user_data.clear()
+# --- States for ConversationHandler ---
+NAME, PHONE = range(2)
 
 # --- Products (Demo) ---
 products = [
@@ -48,11 +37,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "products":
         for p in products:
-            with open(p["img"], "rb") as img:
-                await query.message.reply_photo(
-                    img,
-                    caption=f"{p['name']}\nҮнэ: {p['price']}₮\nБарааг захиалахын тулд /order_{p['id']} гэж бичнэ үү"
-                )
+            img_path = f"./images/{p['img']}"  # Render-д image folder
+            try:
+                with open(img_path, "rb") as img:
+                    await query.message.reply_photo(
+                        img,
+                        caption=f"{p['name']}\nҮнэ: {p['price']}₮\nБарааг захиалахын тулд /order_{p['id']} гэж бичнэ үү"
+                    )
+            except FileNotFoundError:
+                await query.message.reply_text(f"Image {p['img']} олдсонгүй.")
 
     elif query.data == "contact":
         await query.message.reply_text(
@@ -61,48 +54,64 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- /order command ---
 async def order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Жишээ: /order_1 гэж бичвэл product id 1-г сонгосон болно
     text = update.message.text
     try:
         product_id = int(text.split("_")[1])
         product = next((p for p in products if p["id"] == product_id), None)
         if product:
-            await update.message.reply_text("✍️ Нэрээ бичнэ үү:")
             context.user_data["order"] = {"product": product}
+            await update.message.reply_text("✍️ Нэрээ бичнэ үү:")
+            return NAME
         else:
             await update.message.reply_text("Бараа олдсонгүй.")
+            return ConversationHandler.END
     except:
         await update.message.reply_text("Алдаа гарлаа. Жишээ: /order_1")
+        return ConversationHandler.END
 
-# --- Capture user name for order ---
+# --- Capture user name ---
 async def capture_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "order" in context.user_data:
-        context.user_data["order"]["name"] = update.message.text
-        await update.message.reply_text("Утасны дугаараа бичнэ үү:")
+    context.user_data["order"]["name"] = update.message.text
+    await update.message.reply_text("Утасны дугаараа бичнэ үү:")
+    return PHONE
 
-# --- Capture phone ---
+# --- Capture phone number ---
 async def capture_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if "order" in context.user_data and "name" in context.user_data["order"]:
-        context.user_data["order"]["phone"] = update.message.text
-        product = context.user_data["order"]["product"]
-        # Админд мэдэгдэл (ADMIN_ID-г өөрийн Telegram id-р соль)
-        ADMIN_ID = 123456789
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"Шинэ захиалга ирлээ!\nБараа: {product['name']}\nНэр: {context.user_data['order']['name']}\nУтас: {context.user_data['order']['phone']}"
-        )
-        await update.message.reply_text("Таны захиалга бүртгэгдлээ. 🙏 Баярлалаа!")
-        context.user_data.clear()
+    context.user_data["order"]["phone"] = update.message.text
+    product = context.user_data["order"]["product"]
+
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=f"Шинэ захиалга ирлээ!\n"
+             f"Бараа: {product['name']}\n"
+             f"Нэр: {context.user_data['order']['name']}\n"
+             f"Утас: {context.user_data['order']['phone']}"
+    )
+
+    await update.message.reply_text("Таны захиалга бүртгэгдлээ. 🙏 Баярлалаа!")
+    context.user_data.clear()
+    return ConversationHandler.END
 
 # --- Main function ---
 def main():
-    app = Application.builder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
+    # /start
     app.add_handler(CommandHandler("start", start))
+
+    # Button callback
     app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(CommandHandler("order", order))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, capture_name))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, capture_phone))
+
+    # Conversation for /order_1, /order_2 ...
+    conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex(r"^/order_\d+"), order)],
+        states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, capture_name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, capture_phone)],
+        },
+        fallbacks=[]
+    )
+    app.add_handler(conv_handler)
 
     print("🤖 Shop bot ажиллаж эхэллээ...")
     app.run_polling()
